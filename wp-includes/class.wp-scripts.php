@@ -145,7 +145,7 @@ class WP_Scripts extends WP_Dependencies {
 			$l10n[$key] = html_entity_decode( (string) $value, ENT_QUOTES, 'UTF-8');
 		}
 
-		$script = "var $object_name = " . json_encode($l10n) . ';';
+		$script = "window.$object_name = " . json_encode($l10n) . ';';
 
 		if ( !empty($after) )
 			$script .= "\n$after;";
