@@ -25,13 +25,10 @@ jQuery(document).ready( function($) {
 
 	autosavePeriodical = $.schedule({time: autosaveL10n.autosaveInterval * 1000, func: function() { autosave(); }, repeat: true, protect: true});
 
-	//Disable autosave after the form has been submitted
-	$("#post").submit(function() {
-		$.cancel(autosavePeriodical);
-		autosaveLockRelease = false;
-	});
+	var clickedSubmitButton;
 
-	$('input[type="submit"], a.submitdelete', '#submitpost').click(function(){
+	//Disable autosave once form has been submitted
+	$("#post").submit(function() {
 		blockSave = true;
 		window.onbeforeunload = null;
 		$(':button, :submit', '#submitpost').each(function(){
@@ -41,10 +38,18 @@ jQuery(document).ready( function($) {
 			else
 				t.addClass('button-disabled');
 		});
-		if ( $(this).attr('id') == 'publish' )
+		if ( $(clickedSubmitButton).attr('id') == 'publish' )
 			$('#major-publishing-actions .spinner').show();
 		else
 			$('#minor-publishing .spinner').show();
+
+		$.cancel(autosavePeriodical);
+		autosaveLockRelease = false;
+		clickedSubmitButton = null;
+	});
+
+	$('input[type="submit"], a.submitdelete', '#submitpost').click(function(e){
+		clickedSubmitButton = this;
 	});
 
 	window.onbeforeunload = function(){
