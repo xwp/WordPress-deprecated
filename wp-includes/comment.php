@@ -1281,6 +1281,7 @@ function wp_insert_comment($commentdata) {
 	);
 	$commentdata = array_merge( $defaults, $commentdata );
 	$data = array_intersect_key( $commentdata, $defaults );
+	$data = apply_filters( 'wp_insert_comment_data', $data );
 	extract($data, EXTR_SKIP);
 	$wpdb->insert($wpdb->comments, $data);
 
