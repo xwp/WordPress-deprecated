@@ -23,14 +23,22 @@ require( ABSPATH . WPINC . '/option.php' );
  * @param bool $translate Whether the return date should be translated. Default is true.
  * @return string|int Formatted date string, or Unix timestamp.
  */
-function mysql2date( $format, $date, $translate = true ) {
+function mysql2date( $format, $date, $translate = true, $gmt = false ) {
 	if ( empty( $date ) )
 		return false;
+
+	if ( $gmt == true ) {
+		$previous_tz = date_default_timezone_get();
+		date_default_timezone_set('UTC');
+	}
 
 	if ( 'G' == $format )
 		return strtotime( $date . ' +0000' );
 
 	$i = strtotime( $date );
+
+	if ( $gmt == true )
+		date_default_timezone_set($previous_tz);
 
 	if ( 'U' == $format )
 		return $i;
