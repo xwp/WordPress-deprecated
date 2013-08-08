@@ -27,26 +27,39 @@ function mysql2date( $format, $date, $translate = true, $gmt = false ) {
 	if ( empty( $date ) )
 		return false;
 
+	//If GMT/UTC is requested, ensure the right timezone is set.
 	if ( $gmt ) {
 		$previous_tz = date_default_timezone_get();
 		date_default_timezone_set('UTC');
 	}
 
-	if ( 'G' == $format )
-		return strtotime( $date . ' +0000' );
+	/**
+	 * Store the new date in a variable.
+	 * We can't simply return it because we may have to restore the default timezone.
+	 *
+	 * Brackets used for readability.
+	 */
+	if ( 'G' == $format ) {
+		$new_date = strtotime( $date . ' +0000' );
+	} else {
+		$i = strtotime( $date );
+	}
 
-	$i = strtotime( $date );
+	if ( 'U' == $format ) {
+		$new_date = $i;
+	} else {
+		//Add the "G != $format" statement so $new_date doesn't change if G really is the requested format.
+		if ( ( 'G' != $format ) && ( $translate ) )
+			$new_date = date_i18n( $format, $i );
+		elseif ( 'G' != $format )
+			$new_date = date( $format, $i );
+	}
 
+	//If needed, restore the default timezone.
 	if ( $gmt )
 		date_default_timezone_set($previous_tz);
 
-	if ( 'U' == $format )
-		return $i;
-
-	if ( $translate )
-		return date_i18n( $format, $i );
-	else
-		return date( $format, $i );
+	return $new_date;
 }
 
 /**
@@ -504,13 +517,14 @@ function wp_get_http( $url, $file_path = false, $red = 1 ) {
 
 	$options = array();
 	$options['redirection'] = 5;
+	$options['reject_unsafe_urls'] = true;
 
 	if ( false == $file_path )
 		$options['method'] = 'HEAD';
 	else
 		$options['method'] = 'GET';
 
-	$response = wp_safe_remote_request( $url, $options );
+	$response = wp_remote_request($url, $options);
 
 	if ( is_wp_error( $response ) )
 		return false;
@@ -551,7 +565,7 @@ function wp_get_http_headers( $url, $deprecated = false ) {
 	if ( !empty( $deprecated ) )
 		_deprecated_argument( __FUNCTION__, '2.7' );
 
-	$response = wp_safe_remote_head( $url );
+	$response = wp_remote_head( $url, array( 'reject_unsafe_urls' => true ) );
 
 	if ( is_wp_error( $response ) )
 		return false;
@@ -766,8 +780,9 @@ function wp_remote_fopen( $uri ) {
 
 	$options = array();
 	$options['timeout'] = 10;
+	$options['reject_unsafe_urls'] = true;
 
-	$response = wp_safe_remote_get( $uri, $options );
+	$response = wp_remote_get( $uri, $options );
 
 	if ( is_wp_error( $response ) )
 		return false;
@@ -1432,7 +1447,7 @@ function get_temp_dir() {
 	}
 
 	$temp = ini_get('upload_tmp_dir');
-	if ( @is_dir( $temp ) && wp_is_writable( $temp ) )
+	if ( is_dir( $temp ) && wp_is_writable( $temp ) )
 		return trailingslashit( rtrim( $temp, '\\' ) );
 
 	$temp = WP_CONTENT_DIR . '/';
