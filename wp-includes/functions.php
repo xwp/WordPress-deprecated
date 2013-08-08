@@ -27,7 +27,7 @@ function mysql2date( $format, $date, $translate = true, $gmt = false ) {
 	if ( empty( $date ) )
 		return false;
 
-	if ( $gmt == true ) {
+	if ( $gmt ) {
 		$previous_tz = date_default_timezone_get();
 		date_default_timezone_set('UTC');
 	}
@@ -37,7 +37,7 @@ function mysql2date( $format, $date, $translate = true, $gmt = false ) {
 
 	$i = strtotime( $date );
 
-	if ( $gmt == true )
+	if ( $gmt )
 		date_default_timezone_set($previous_tz);
 
 	if ( 'U' == $format )
