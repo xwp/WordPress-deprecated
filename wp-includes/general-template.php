@@ -1505,7 +1505,7 @@ function get_post_time( $d = 'U', $gmt = false, $post = null, $translate = false
 	else
 		$time = $post->post_date;
 
-	$time = mysql2date($d, $time, $translate);
+	$time = mysql2date($d, $time, $translate, $gmt);
 	return apply_filters('get_post_time', $time, $d, $gmt);
 }
 
@@ -1554,7 +1554,7 @@ function get_post_modified_time( $d = 'U', $gmt = false, $post = null, $translat
 		$time = $post->post_modified_gmt;
 	else
 		$time = $post->post_modified;
-	$time = mysql2date($d, $time, $translate);
+	$time = mysql2date($d, $time, $translate, $gmt);
 
 	return apply_filters('get_post_modified_time', $time, $d, $gmt);
 }

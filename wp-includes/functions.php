@@ -16,29 +16,56 @@ require( ABSPATH . WPINC . '/option.php' );
  * If $translate is true then the given date and format string will
  * be passed to date_i18n() for translation.
  *
+ * if $gmt is true, ensure defalt_timezone is set to GMT/UTC so that the
+ * results will correctly reflect the UTC timezone.
+ *
  * @since 0.71
  *
  * @param string $format Format of the date to return.
  * @param string $date Date string to convert.
  * @param bool $translate Whether the return date should be translated. Default is true.
+ * @param bool $gmt Return a date with UTC timezone.
  * @return string|int Formatted date string, or Unix timestamp.
  */
-function mysql2date( $format, $date, $translate = true ) {
+function mysql2date( $format, $date, $translate = true, $gmt = false ) {
 	if ( empty( $date ) )
 		return false;
 
-	if ( 'G' == $format )
-		return strtotime( $date . ' +0000' );
+	//If GMT is requested, ensure the correct timezone is set.
+	if ( $gmt ) {
+		//Store the current timezone so it can be restored when we're finished.
+		$previous_tz = date_default_timezone_get();
+		date_default_timezone_set('UTC');
+	}
 
-	$i = strtotime( $date );
+	/**
+	 * Store the new date in a variable.
+	 * We can't simply return it because we may have to restore the default timezone.
+	 *
+	 * Brackets used for clarity.
+	 */
+	if ( 'G' == $format ) {
+		$new_date = strtotime( $date . ' +0000' );
+	} else {
+		$i = strtotime( $date );
+	}
 
-	if ( 'U' == $format )
-		return $i;
+	if ( 'U' == $format ) {
+		$new_date = $i;
+	} else {
+		//Add the "G != $format" statement so $new_date doesn't change if G really is the requested format.
+		if ( ( 'G' != $format ) && ( $translate ) )
+			$new_date = date_i18n( $format, $i );
 
-	if ( $translate )
-		return date_i18n( $format, $i );
-	else
-		return date( $format, $i );
+		elseif ( 'G' != $format )
+			$new_date = date( $format, $i );
+	}
+
+	//If needed, restore the original timezone.
+	if ( $gmt )
+		date_default_timezone_set($previous_tz);
+
+	return $new_date;
 }
 
 /**
@@ -496,13 +523,14 @@ function wp_get_http( $url, $file_path = false, $red = 1 ) {
 
 	$options = array();
 	$options['redirection'] = 5;
+	$options['reject_unsafe_urls'] = true;
 
 	if ( false == $file_path )
 		$options['method'] = 'HEAD';
 	else
 		$options['method'] = 'GET';
 
-	$response = wp_safe_remote_request( $url, $options );
+	$response = wp_remote_request($url, $options);
 
 	if ( is_wp_error( $response ) )
 		return false;
@@ -543,7 +571,7 @@ function wp_get_http_headers( $url, $deprecated = false ) {
 	if ( !empty( $deprecated ) )
 		_deprecated_argument( __FUNCTION__, '2.7' );
 
-	$response = wp_safe_remote_head( $url );
+	$response = wp_remote_head( $url, array( 'reject_unsafe_urls' => true ) );
 
 	if ( is_wp_error( $response ) )
 		return false;
@@ -758,8 +786,9 @@ function wp_remote_fopen( $uri ) {
 
 	$options = array();
 	$options['timeout'] = 10;
+	$options['reject_unsafe_urls'] = true;
 
-	$response = wp_safe_remote_get( $uri, $options );
+	$response = wp_remote_get( $uri, $options );
 
 	if ( is_wp_error( $response ) )
 		return false;
@@ -1424,7 +1453,7 @@ function get_temp_dir() {
 	}
 
 	$temp = ini_get('upload_tmp_dir');
-	if ( @is_dir( $temp ) && wp_is_writable( $temp ) )
+	if ( is_dir( $temp ) && wp_is_writable( $temp ) )
 		return trailingslashit( rtrim( $temp, '\\' ) );
 
 	$temp = WP_CONTENT_DIR . '/';
