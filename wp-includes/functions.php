@@ -16,56 +16,29 @@ require( ABSPATH . WPINC . '/option.php' );
  * If $translate is true then the given date and format string will
  * be passed to date_i18n() for translation.
  *
- * if $gmt is true, ensure defalt_timezone is set to GMT/UTC so that the
- * results will correctly reflect the UTC timezone.
- *
  * @since 0.71
  *
  * @param string $format Format of the date to return.
  * @param string $date Date string to convert.
  * @param bool $translate Whether the return date should be translated. Default is true.
- * @param bool $gmt Return a date with UTC timezone.
  * @return string|int Formatted date string, or Unix timestamp.
  */
-function mysql2date( $format, $date, $translate = true, $gmt = false ) {
+function mysql2date( $format, $date, $translate = true ) {
 	if ( empty( $date ) )
 		return false;
 
-	//If GMT is requested, ensure the correct timezone is set.
-	if ( $gmt ) {
-		//Store the current timezone so it can be restored when we're finished.
-		$previous_tz = date_default_timezone_get();
-		date_default_timezone_set('UTC');
-	}
+	if ( 'G' == $format )
+		return strtotime( $date . ' +0000' );
 
-	/**
-	 * Store the new date in a variable.
-	 * We can't simply return it because we may have to restore the default timezone.
-	 *
-	 * Brackets used for clarity.
-	 */
-	if ( 'G' == $format ) {
-		$new_date = strtotime( $date . ' +0000' );
-	} else {
-		$i = strtotime( $date );
-	}
+	$i = strtotime( $date );
 
-	if ( 'U' == $format ) {
-		$new_date = $i;
-	} else {
-		//Add the "G != $format" statement so $new_date doesn't change if G really is the requested format.
-		if ( ( 'G' != $format ) && ( $translate ) )
-			$new_date = date_i18n( $format, $i );
+	if ( 'U' == $format )
+		return $i;
 
-		elseif ( 'G' != $format )
-			$new_date = date( $format, $i );
-	}
-
-	//If needed, restore the original timezone.
-	if ( $gmt )
-		date_default_timezone_set($previous_tz);
-
-	return $new_date;
+	if ( $translate )
+		return date_i18n( $format, $i );
+	else
+		return date( $format, $i );
 }
 
 /**
