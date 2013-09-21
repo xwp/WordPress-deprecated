@@ -857,49 +857,59 @@ function dynamic_sidebar($index = 1) {
 		}
 	}
 
-	$sidebars_widgets = wp_get_sidebars_widgets();
-	if ( empty( $sidebars_widgets ) )
-		return false;
-
-	if ( empty($wp_registered_sidebars[$index]) || !array_key_exists($index, $sidebars_widgets) || !is_array($sidebars_widgets[$index]) || empty($sidebars_widgets[$index]) )
-		return false;
-
-	$sidebar = $wp_registered_sidebars[$index];
-
 	$did_one = false;
-	foreach ( (array) $sidebars_widgets[$index] as $id ) {
+	$sidebars_widgets = wp_get_sidebars_widgets();
+	$is_empty_sidebar = (
+		empty( $sidebars_widgets )
+		||
+		empty( $wp_registered_sidebars[$index] )
+		||
+		! array_key_exists( $index, $sidebars_widgets )
+		||
+		! is_array( $sidebars_widgets[$index] )
+		||
+		empty( $sidebars_widgets[$index] )
+	);
 
-		if ( !isset($wp_registered_widgets[$id]) ) continue;
+	do_action( 'temp_before_dynamic_sidebar', $index, $is_empty_sidebar );
+	if ( ! $is_empty_sidebar ) {
+		$sidebar = $wp_registered_sidebars[$index];
 
-		$params = array_merge(
-			array( array_merge( $sidebar, array('widget_id' => $id, 'widget_name' => $wp_registered_widgets[$id]['name']) ) ),
-			(array) $wp_registered_widgets[$id]['params']
-		);
+		foreach ( (array) $sidebars_widgets[$index] as $id ) {
 
-		// Substitute HTML id and class attributes into before_widget
-		$classname_ = '';
-		foreach ( (array) $wp_registered_widgets[$id]['classname'] as $cn ) {
-			if ( is_string($cn) )
-				$classname_ .= '_' . $cn;
-			elseif ( is_object($cn) )
-				$classname_ .= '_' . get_class($cn);
-		}
-		$classname_ = ltrim($classname_, '_');
-		$params[0]['before_widget'] = sprintf($params[0]['before_widget'], $id, $classname_);
+			if ( !isset($wp_registered_widgets[$id]) ) continue;
 
-		$params = apply_filters( 'dynamic_sidebar_params', $params );
+			$params = array_merge(
+				array( array_merge( $sidebar, array('widget_id' => $id, 'widget_name' => $wp_registered_widgets[$id]['name']) ) ),
+				(array) $wp_registered_widgets[$id]['params']
+			);
 
-		$callback = $wp_registered_widgets[$id]['callback'];
+			// Substitute HTML id and class attributes into before_widget
+			$classname_ = '';
+			foreach ( (array) $wp_registered_widgets[$id]['classname'] as $cn ) {
+				if ( is_string($cn) )
+					$classname_ .= '_' . $cn;
+				elseif ( is_object($cn) )
+					$classname_ .= '_' . get_class($cn);
+			}
+			$classname_ = ltrim($classname_, '_');
+			$params[0]['before_widget'] = sprintf($params[0]['before_widget'], $id, $classname_);
 
-		do_action( 'dynamic_sidebar', $wp_registered_widgets[$id] );
+			$params = apply_filters( 'dynamic_sidebar_params', $params );
 
-		if ( is_callable($callback) ) {
-			call_user_func_array($callback, $params);
-			$did_one = true;
+			$callback = $wp_registered_widgets[$id]['callback'];
+
+			do_action( 'dynamic_sidebar', $wp_registered_widgets[$id] );
+
+			if ( is_callable($callback) ) {
+				call_user_func_array($callback, $params);
+				$did_one = true;
+			}
 		}
 	}
+	do_action( 'temp_after_dynamic_sidebar', $index, $is_empty_sidebar );
 
-	return $did_one;
+	return apply_filters( 'temp_dynamic_sidebar_did_one', $did_one, $index );
 }
 
 /**
@@ -977,10 +987,9 @@ function is_dynamic_sidebar() {
 function is_active_sidebar( $index ) {
 	$index = ( is_int($index) ) ? "sidebar-$index" : sanitize_title($index);
 	$sidebars_widgets = wp_get_sidebars_widgets();
-	if ( !empty($sidebars_widgets[$index]) )
-		return true;
-
-	return false;
+	$is_active_sidebar = ! empty( $sidebars_widgets[$index] );
+	$is_active_sidebar = apply_filters( 'temp_is_active_sidebar', $is_active_sidebar, $index );
+	return $is_active_sidebar;
 }
 
 /* Internal Functions */
